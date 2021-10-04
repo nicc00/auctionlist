@@ -3,7 +3,7 @@ library(DT)
 library(rvest)
 
 x<- data.frame(Item = NA,
-               End_Date = NA,
+               Time_Left = NA,
                Brand_Name = NA,
                Source = NA,
                Link = NA,
@@ -51,25 +51,45 @@ server = function(input, output, session) {
     print(counter$countervalue)
     #get page elements
     html <- read_html(input$link)
-    
-    end_date = html %>% html_elements("#endTime") %>% html_text2()
-    
-    source = "ZM"
-    
-    link = paste('<a href=', input$link, '>Link</a>', sep='')
+    if (grepl('zenmarket', input$link, fixed=TRUE)) {
+      time_left = html %>% html_elements("#lblTimeLeft") %>% html_text2()
+      
+      source = "ZM"
+      
+      link = paste('<a href=', input$link, ' target="_blank">Link</a>', sep='')
+      
+      item_name = html %>% html_elements("#itemTitle") %>% html_text2()
+      
+      thumbnail = html %>% html_elements("#imgPreview") %>% html_attr("src")
+      thumbnail = paste('<img src=', thumbnail, ' height=150><img>', sep='')
 
-    item_name = html %>% html_elements("#itemTitle") %>% html_text2()
+      price = html %>% html_elements(".amount") %>% html_text2()
+      price = price[1]
+    } else if (grepl('ebay', input$link, fixed=TRUE)) {
+      time_left = html %>% html_elements(".u-flL") %>% html_text2()
+      time_left = time_left[4]
+      
+      source = "ebay"
+      
+      link = paste('<a href=', input$link, ' target="_blank">Link</a>', sep='')
+
+      item_name = html %>% html_elements("#itemTitle") %>% html_text2()
+      item_name = substr(item_name, 15, nchar(item_name))
+
+      
+      thumbnail = html %>% html_elements("#icImg") %>% html_attr("src")
+      thumbnail = thumbnail[1]
+      thumbnail = paste('<img src=', thumbnail, ' height=150><img>', sep='')
+
+      price = html %>% html_elements("#mm-saleDscPrc") %>% html_text2()
+    }
     
-    thumbnail = html %>% html_elements("#imgPreview") %>% html_attr("src")
-    thumbnail = paste('<img src=', thumbnail, ' height=150><img>', sep='')
-    thumbnail
     
-    price = html %>% html_elements(".amount") %>% html_text2()
-    price = price[1]
+    
     
     Actions = shinyInput(actionButton, 1, 'button_', label = "Delete", onclick = 'Shiny.onInputChange(\"select_button\",  this.id)' )
     
-    newRow <- data.frame(counter$countervalue, end_date, NA, source, link, item_name, thumbnail, price, Actions)
+    newRow <- data.frame(counter$countervalue, time_left, NA, source, link, item_name, thumbnail, price, Actions)
     colnames(newRow)<-colnames(values$df)
     values$df <- rbind(values$df,newRow)
   })
